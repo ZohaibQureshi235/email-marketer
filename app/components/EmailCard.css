@@ -1,0 +1,222 @@
+.email-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.email-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.email-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.email-card:hover::before {
+  opacity: 1;
+}
+
+.email-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.email-recipient {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0;
+  word-break: break-all;
+}
+
+.email-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.action-button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.action-button.edit {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.action-button.edit:hover:not(:disabled) {
+  background: #e0f2fe;
+  transform: translateY(-1px);
+}
+
+.action-button.send {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.action-button.send:hover:not(:disabled) {
+  background: #dcfce7;
+  transform: translateY(-1px);
+}
+
+.action-button.delete {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.action-button.delete:hover:not(:disabled) {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+.action-button.save {
+  background: #10b981;
+  color: white;
+}
+
+.action-button.save:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.action-button.cancel {
+  background: #6b7280;
+  color: white;
+}
+
+.action-button.cancel:hover:not(:disabled) {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+.email-card-content {
+  margin-bottom: 16px;
+}
+
+.email-subject {
+  color: #374151;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 0 0 8px 0;
+}
+
+.email-preview {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.email-input, .email-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.email-input:focus, .email-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.email-input.subject {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.email-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.email-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.email-date {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.email-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.email-status.draft {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.email-status.sent {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.email-status.sending {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+@media (max-width: 768px) {
+  .email-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .email-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .action-button {
+    flex: 1;
+    min-width: 60px;
+  }
+}
