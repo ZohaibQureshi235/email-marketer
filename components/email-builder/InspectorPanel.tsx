@@ -1,25 +1,30 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { EmailBlock } from "./EmailBuilder";
+import { EmailBlock, EmailBlockType } from "../../types/email-builder";
 
 interface InspectorPanelProps {
   selectedBlock: EmailBlock | null;
   onUpdateBlock: (id: string, updates: Partial<EmailBlock>) => void;
 }
 
+type StyleTab =
+  | "content"
+  | "style"
+  | "advanced"
+  | "responsive"
+  | "background"
+  | "border"
+  | "typography"
+  | "spacing";
+
 export default function InspectorPanel({
   selectedBlock,
   onUpdateBlock,
 }: InspectorPanelProps) {
-  const [activeTab, setActiveTab] = useState<"content" | "styles" | "settings">(
-    "content"
-  );
-  const [imageUploadMethod, setImageUploadMethod] = useState<"url" | "upload">(
-    "url"
-  );
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<StyleTab>("content");
   const [localStyles, setLocalStyles] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (selectedBlock) {
@@ -29,7 +34,7 @@ export default function InspectorPanel({
 
   if (!selectedBlock) {
     return (
-      <div className="w-80 bg-white border-l border-gray-200 p-6">
+      <div className="w-80 bg-white border-l border-gray-200 p-6 flex-shrink-0">
         <div className="text-center text-gray-500 py-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
             <CursorClickIcon className="h-8 w-8 text-gray-400" />
@@ -47,9 +52,6 @@ export default function InspectorPanel({
 
   const updateStyle = (property: string, value: string) => {
     const updatedStyles = { ...selectedBlock.styles, [property]: value };
-
-    setLocalStyles(updatedStyles);
-
     onUpdateBlock(selectedBlock.id, { styles: updatedStyles });
   };
 
@@ -61,679 +63,900 @@ export default function InspectorPanel({
     onUpdateBlock(selectedBlock.id, { [property]: value });
   };
 
-  const toggleTextStyle = (style: string, value: string) => {
-    const currentValue = selectedBlock.styles[style];
-    const newValue = currentValue === value ? "" : value;
-    updateStyle(style, newValue);
+  // Handle key events for inputs
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
   };
 
-  const isStyleActive = (style: string, value: string) => {
-    return selectedBlock.styles[style] === value;
-  };
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    // Create image URL from file
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
       updateContent(imageUrl);
-      updateProperty("altText", file.name);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
-  const triggerFileInput = () => {
+  const triggerImageUpload = () => {
     fileInputRef.current?.click();
   };
 
-  const getStyleValue = (property: string, defaultValue: string = "") => {
-    return localStyles[property] || defaultValue;
-  };
+  // Color Picker Component
+  const ColorPicker = ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+  }) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <div className="flex items-center space-x-2">
+        <input
+          type="color"
+          value={value || "#000000"}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleInputKeyDown}
+          className="w-8 h-8 border border-gray-300 rounded cursor-pointer"
+        />
+        <input
+          type="text"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleInputKeyDown}
+          className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+          placeholder="#000000"
+        />
+      </div>
+    </div>
+  );
 
-  const handleColorChange = (property: string, value: string) => {
-    const formattedValue = value.startsWith("#") ? value : `#${value}`;
-    updateStyle(property, formattedValue);
-  };
+  // Size Input Component
+  const SizeInput = ({
+    label,
+    value,
+    onChange,
+    unit = "px",
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    unit?: string;
+  }) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <div className="flex items-center">
+        <input
+          type="number"
+          value={parseInt(value) || 0}
+          onChange={(e) => onChange(`${e.target.value}${unit}`)}
+          onKeyDown={handleInputKeyDown}
+          className="flex-1 px-2 py-1 border border-gray-300 rounded-l text-xs"
+        />
+        <span className="px-2 py-1 bg-gray-100 border border-l-0 border-gray-300 text-xs text-gray-600 rounded-r">
+          {unit}
+        </span>
+      </div>
+    </div>
+  );
 
-  const handleStyleInputChange = (property: string, value: string) => {
-    updateStyle(property, value);
+  // Typography Controls
+  const TypographyControls = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Font Family
+          </label>
+          <select
+            value={localStyles.fontFamily || "Arial, sans-serif"}
+            onChange={(e) => updateStyle("fontFamily", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="Arial, Helvetica, sans-serif">Arial</option>
+            <option value="'Helvetica Neue', Helvetica, sans-serif">
+              Helvetica
+            </option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Times New Roman', Times, serif">
+              Times New Roman
+            </option>
+            <option value="Verdana, Geneva, sans-serif">Verdana</option>
+            <option value="'Courier New', Courier, monospace">
+              Courier New
+            </option>
+            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Font Size
+          </label>
+          <div className="flex space-x-1">
+            <select
+              value={parseInt(localStyles.fontSize || "16")}
+              onChange={(e) => updateStyle("fontSize", `${e.target.value}px`)}
+              onKeyDown={handleInputKeyDown}
+              className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+            >
+              {[8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map(
+                (size) => (
+                  <option key={size} value={size}>
+                    {size}px
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Font Weight
+          </label>
+          <select
+            value={localStyles.fontWeight || "normal"}
+            onChange={(e) => updateStyle("fontWeight", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="100">Thin (100)</option>
+            <option value="200">Extra Light (200)</option>
+            <option value="300">Light (300)</option>
+            <option value="400">Normal (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semi Bold (600)</option>
+            <option value="700">Bold (700)</option>
+            <option value="800">Extra Bold (800)</option>
+            <option value="900">Black (900)</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Line Height
+          </label>
+          <select
+            value={localStyles.lineHeight || "1.5"}
+            onChange={(e) => updateStyle("lineHeight", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="1">1</option>
+            <option value="1.2">1.2</option>
+            <option value="1.4">1.4</option>
+            <option value="1.5">1.5</option>
+            <option value="1.6">1.6</option>
+            <option value="1.8">1.8</option>
+            <option value="2">2</option>
+            <option value="2.5">2.5</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <ColorPicker
+          label="Text Color"
+          value={localStyles.color || "#000000"}
+          onChange={(value) => updateStyle("color", value)}
+        />
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Text Align
+          </label>
+          <div className="flex space-x-1">
+            {["left", "center", "right", "justify"].map((align) => (
+              <button
+                key={align}
+                onClick={() => updateStyle("textAlign", align)}
+                onKeyDown={handleInputKeyDown}
+                className={`flex-1 px-2 py-1 text-xs border rounded ${
+                  localStyles.textAlign === align
+                    ? "bg-blue-500 text-white border-blue-500"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {align === "left" && "←"}
+                {align === "center" && "↔"}
+                {align === "right" && "→"}
+                {align === "justify" && "⇔"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Text Transform
+        </label>
+        <div className="flex space-x-1">
+          {["none", "uppercase", "lowercase", "capitalize"].map((transform) => (
+            <button
+              key={transform}
+              onClick={() => updateStyle("textTransform", transform)}
+              onKeyDown={handleInputKeyDown}
+              className={`flex-1 px-2 py-1 text-xs border rounded ${
+                localStyles.textTransform === transform
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {transform.charAt(0).toUpperCase() + transform.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Spacing Controls
+  const SpacingControls = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <SizeInput
+          label="Padding Top"
+          value={localStyles.paddingTop || "0"}
+          onChange={(value) => updateStyle("paddingTop", value)}
+        />
+        <SizeInput
+          label="Padding Right"
+          value={localStyles.paddingRight || "0"}
+          onChange={(value) => updateStyle("paddingRight", value)}
+        />
+        <SizeInput
+          label="Padding Bottom"
+          value={localStyles.paddingBottom || "0"}
+          onChange={(value) => updateStyle("paddingBottom", value)}
+        />
+        <SizeInput
+          label="Padding Left"
+          value={localStyles.paddingLeft || "0"}
+          onChange={(value) => updateStyle("paddingLeft", value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <SizeInput
+          label="Margin Top"
+          value={localStyles.marginTop || "0"}
+          onChange={(value) => updateStyle("marginTop", value)}
+        />
+        <SizeInput
+          label="Margin Right"
+          value={localStyles.marginRight || "0"}
+          onChange={(value) => updateStyle("marginRight", value)}
+        />
+        <SizeInput
+          label="Margin Bottom"
+          value={localStyles.marginBottom || "0"}
+          onChange={(value) => updateStyle("marginBottom", value)}
+        />
+        <SizeInput
+          label="Margin Left"
+          value={localStyles.marginLeft || "0"}
+          onChange={(value) => updateStyle("marginLeft", value)}
+        />
+      </div>
+    </div>
+  );
+
+  // Background Controls
+  const BackgroundControls = () => (
+    <div className="space-y-4">
+      <ColorPicker
+        label="Background Color"
+        value={localStyles.backgroundColor || "#ffffff"}
+        onChange={(value) => updateStyle("backgroundColor", value)}
+      />
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Background Image
+        </label>
+        <input
+          type="text"
+          value={
+            localStyles.backgroundImage?.replace("url(", "").replace(")", "") ||
+            ""
+          }
+          onChange={(e) =>
+            updateStyle("backgroundImage", `url(${e.target.value})`)
+          }
+          onKeyDown={handleInputKeyDown}
+          className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          placeholder="https://example.com/image.jpg"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Background Size
+          </label>
+          <select
+            value={localStyles.backgroundSize || "cover"}
+            onChange={(e) => updateStyle("backgroundSize", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+            <option value="auto">Auto</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Background Position
+          </label>
+          <select
+            value={localStyles.backgroundPosition || "center"}
+            onChange={(e) => updateStyle("backgroundPosition", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Border Controls
+  const BorderControls = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <SizeInput
+          label="Border Width"
+          value={localStyles.borderWidth || "0"}
+          onChange={(value) => updateStyle("borderWidth", value)}
+        />
+        <ColorPicker
+          label="Border Color"
+          value={localStyles.borderColor || "#000000"}
+          onChange={(value) => updateStyle("borderColor", value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Border Style
+          </label>
+          <select
+            value={localStyles.borderStyle || "solid"}
+            onChange={(e) => updateStyle("borderStyle", e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            className="w-full text-black px-2 py-1 border border-gray-300 rounded text-xs"
+          >
+            <option value="none">None</option>
+            <option value="solid">Solid</option>
+            <option value="dashed">Dashed</option>
+            <option value="dotted">Dotted</option>
+            <option value="double">Double</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Border Radius
+          </label>
+          <div className="flex space-x-1">
+            {[0, 2, 4, 6, 8, 12, 16, 24, 32].map((radius) => (
+              <button
+                key={radius}
+                onClick={() => updateStyle("borderRadius", `${radius}px`)}
+                onKeyDown={handleInputKeyDown}
+                className={`flex-1 px-1 py-1 text-xs border rounded ${
+                  localStyles.borderRadius === `${radius}px`
+                    ? "bg-blue-500 text-white border-blue-500"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {radius}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Content Tab for specific block types
+  const renderContentTab = () => {
+    switch (selectedBlock.type) {
+      case "text":
+        return (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Text Content
+            </label>
+            <textarea
+              value={selectedBlock.content}
+              onChange={(e) => updateContent(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+              rows={6}
+              placeholder="Enter your text content..."
+            />
+          </div>
+        );
+
+      case "button":
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Button Text
+              </label>
+              <input
+                type="text"
+                value={selectedBlock.content}
+                onChange={(e) => updateContent(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+                placeholder="Button text"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Button Link
+              </label>
+              <input
+                type="text"
+                value={selectedBlock.link || ""}
+                onChange={(e) => updateProperty("link", e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+                placeholder="https://example.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <SizeInput
+                label="Button Width"
+                value={localStyles.width || "auto"}
+                onChange={(value) => updateStyle("width", value)}
+              />
+              <SizeInput
+                label="Button Height"
+                value={localStyles.height || "auto"}
+                onChange={(value) => updateStyle("height", value)}
+              />
+            </div>
+          </div>
+        );
+
+      case "image":
+        return (
+          <div className="space-y-4">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              className="hidden"
+            />
+
+            {/* Image Preview */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Image Preview
+              </label>
+              <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                <img
+                  src={selectedBlock.content}
+                  alt={selectedBlock.altText || "Preview"}
+                  className="max-w-full h-auto rounded-lg mx-auto"
+                  style={localStyles}
+                />
+              </div>
+            </div>
+
+            {/* Upload Button */}
+            <div>
+              <button
+                type="button"
+                onClick={triggerImageUpload}
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                  />
+                </svg>
+                Upload Image from Computer
+              </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Max file size: 5MB
+              </p>
+            </div>
+
+            {/* Image URL Input */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Image URL
+              </label>
+              <input
+                type="text"
+                value={selectedBlock.content}
+                onChange={(e) => updateContent(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter image URL or upload from computer
+              </p>
+            </div>
+
+            {/* Alt Text Input */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Alt Text
+              </label>
+              <input
+                type="text"
+                value={selectedBlock.altText || ""}
+                onChange={(e) => updateProperty("altText", e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+                placeholder="Description of the image"
+              />
+            </div>
+
+            {/* Image Size Controls */}
+            <div className="grid grid-cols-2 gap-3">
+              <SizeInput
+                label="Width"
+                value={localStyles.width || "100%"}
+                onChange={(value) => updateStyle("width", value)}
+              />
+              <SizeInput
+                label="Height"
+                value={localStyles.height || "auto"}
+                onChange={(value) => updateStyle("height", value)}
+              />
+            </div>
+
+            {/* Image Alignment */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Alignment
+              </label>
+              <div className="flex space-x-2">
+                {[
+                  { value: "left", icon: "←" },
+                  { value: "center", icon: "↔" },
+                  { value: "right", icon: "→" },
+                ].map((align) => (
+                  <button
+                    key={align.value}
+                    onClick={() => updateStyle("textAlign", align.value)}
+                    onKeyDown={handleInputKeyDown}
+                    className={`flex-1 px-3 py-2 text-sm border rounded ${
+                      localStyles.textAlign === align.value
+                        ? "bg-blue-500 text-white border-blue-500"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {align.icon} {align.value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Content
+            </label>
+            <textarea
+              value={selectedBlock.content}
+              onChange={(e) => updateContent(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+              rows={4}
+              placeholder="Enter content..."
+            />
+          </div>
+        );
+    }
   };
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Block Inspector</h2>
+    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full flex-shrink-0">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-900">Inspector</h2>
         <p className="text-sm text-gray-600 capitalize">
           {selectedBlock.type} Block
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
-        {["content", "styles", "settings"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`flex-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              activeTab === tab
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Tabs Navigation */}
+      <div className="border-b border-gray-200">
+        <div className="flex overflow-x-auto">
+          {[
+            { id: "content" as StyleTab, label: "Content" },
+            { id: "typography" as StyleTab, label: "Typography" },
+            { id: "background" as StyleTab, label: "Background" },
+            { id: "border" as StyleTab, label: "Border" },
+            { id: "spacing" as StyleTab, label: "Spacing" },
+            { id: "advanced" as StyleTab, label: "Advanced" },
+            { id: "responsive" as StyleTab, label: "Responsive" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              onKeyDown={handleInputKeyDown}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {activeTab === "content" && (
-        <div className="space-y-6">
-          {selectedBlock.type === "image" ? (
-            <div className="space-y-4">
-              {/* Image Upload Method Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image Source
-                </label>
-                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setImageUploadMethod("url")}
-                    className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                      imageUploadMethod === "url"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    URL
-                  </button>
-                  <button
-                    onClick={() => setImageUploadMethod("upload")}
-                    className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                      imageUploadMethod === "upload"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Upload
-                  </button>
-                </div>
-              </div>
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Content Tab */}
+        {activeTab === "content" && (
+          <div className="space-y-4">{renderContentTab()}</div>
+        )}
 
-              {/* URL Input */}
-              {imageUploadMethod === "url" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedBlock.content}
-                    onChange={(e) => updateContent(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter the full URL of your image
-                  </p>
-
-                  {/* Image Preview */}
-                  {selectedBlock.content && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        Preview:
-                      </p>
-                      <img
-                        src={selectedBlock.content}
-                        alt="Preview"
-                        className="w-full h-32 object-contain rounded-lg border bg-gray-100"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://via.placeholder.com/300x200/3B82F6/FFFFFF?text=Invalid+Image";
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* File Upload */}
-              {imageUploadMethod === "upload" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Image
-                  </label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={triggerFileInput}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-600"
-                  >
-                    <div className="text-center">
-                      <PhotoIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm font-medium">Click to upload</p>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG, GIF up to 10MB
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Preview */}
-                  {selectedBlock.content && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        Preview:
-                      </p>
-                      <img
-                        src={selectedBlock.content}
-                        alt="Preview"
-                        className="w-full h-32 object-contain rounded-lg border bg-gray-100"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Alt Text */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alt Text
-                </label>
-                <input
-                  type="text"
-                  value={selectedBlock.altText || ""}
-                  onChange={(e) => updateProperty("altText", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="Describe your image for accessibility"
-                />
-              </div>
-            </div>
-          ) : selectedBlock.type === "text" ||
-            selectedBlock.type === "header" ||
-            selectedBlock.type === "footer" ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
-              </label>
-              <textarea
-                value={selectedBlock.content}
-                onChange={(e) => updateContent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                rows={4}
-                placeholder="Enter your content here..."
-              />
-            </div>
-          ) : selectedBlock.type === "button" ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Button Text
-                </label>
-                <input
-                  type="text"
-                  value={selectedBlock.content}
-                  onChange={(e) => updateContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="Button text"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Button Link
-                </label>
-                <input
-                  type="text"
-                  value={selectedBlock.link || ""}
-                  onChange={(e) => updateProperty("link", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="https://example.com"
-                />
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
-              </label>
-              <textarea
-                value={selectedBlock.content}
-                onChange={(e) => updateContent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                rows={6}
-                placeholder="Enter your content here..."
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "styles" && (
-        <div className="space-y-6">
-          {/* Text Formatting */}
-          {(selectedBlock.type === "text" ||
-            selectedBlock.type === "header" ||
-            selectedBlock.type === "footer" ||
-            selectedBlock.type === "button") && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Text Formatting
-              </h3>
-
-              {/* Text Style Buttons */}
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                <button
-                  onClick={() => toggleTextStyle("fontWeight", "bold")}
-                  className={`p-2 border rounded-lg text-sm font-medium ${
-                    isStyleActive("fontWeight", "bold")
-                      ? "bg-blue-100 border-blue-500 text-blue-700"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                  title="Bold"
-                >
-                  <span className="font-bold">B</span>
-                </button>
-                <button
-                  onClick={() => toggleTextStyle("fontStyle", "italic")}
-                  className={`p-2 border rounded-lg text-sm ${
-                    isStyleActive("fontStyle", "italic")
-                      ? "bg-blue-100 border-blue-500 text-blue-700"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                  title="Italic"
-                >
-                  <span className="italic">I</span>
-                </button>
-                <button
-                  onClick={() => toggleTextStyle("textDecoration", "underline")}
-                  className={`p-2 border rounded-lg text-sm ${
-                    isStyleActive("textDecoration", "underline")
-                      ? "bg-blue-100 border-blue-500 text-blue-700"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                  title="Underline"
-                >
-                  <span className="underline">U</span>
-                </button>
-                <button
-                  onClick={() => toggleTextStyle("textTransform", "uppercase")}
-                  className={`p-2 border rounded-lg text-sm ${
-                    isStyleActive("textTransform", "uppercase")
-                      ? "bg-blue-100 border-blue-500 text-blue-700"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                  title="Uppercase"
-                >
-                  <span className="uppercase">A↥</span>
-                </button>
-              </div>
-
-              {/* Text Alignment */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {["left", "center", "right"].map((align) => (
-                  <button
-                    key={align}
-                    onClick={() => updateStyle("textAlign", align)}
-                    className={`p-2 border rounded-lg text-sm ${
-                      isStyleActive("textAlign", align)
-                        ? "bg-blue-100 border-blue-500 text-blue-700"
-                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                    title={`Align ${align}`}
-                  >
-                    {align === "left" && "←"}
-                    {align === "center" && "↔"}
-                    {align === "right" && "→"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Font Size */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Font Size
-                </label>
-                <select
-                  value={getStyleValue("fontSize", "16px")}
-                  onChange={(e) => updateStyle("fontSize", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {[
-                    "12px",
-                    "14px",
-                    "16px",
-                    "18px",
-                    "20px",
-                    "24px",
-                    "28px",
-                    "32px",
-                    "36px",
-                    "48px",
-                  ].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Text Color */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Text Color
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="color"
-                    value={getStyleValue("color", "#000000")}
-                    onChange={(e) => handleColorChange("color", e.target.value)}
-                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={getStyleValue("color", "#000000")}
-                    onChange={(e) => handleColorChange("color", e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                    placeholder="#000000"
-                  />
-                </div>
-              </div>
-
-              {/* Background Color */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Background Color
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="color"
-                    value={getStyleValue("backgroundColor", "#ffffff")}
-                    onChange={(e) =>
-                      handleColorChange("backgroundColor", e.target.value)
-                    }
-                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={getStyleValue("backgroundColor", "#ffffff")}
-                    onChange={(e) =>
-                      handleColorChange("backgroundColor", e.target.value)
-                    }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                    placeholder="#ffffff"
-                  />
-                </div>
-              </div>
-
-              {/* Padding */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Padding
-                </label>
-                <select
-                  value={getStyleValue("padding", "10px")}
-                  onChange={(e) => updateStyle("padding", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {[
-                    "0px",
-                    "4px",
-                    "8px",
-                    "10px",
-                    "12px",
-                    "16px",
-                    "20px",
-                    "24px",
-                    "32px",
-                  ].map((padding) => (
-                    <option key={padding} value={padding}>
-                      {padding}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Margin */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Margin
-                </label>
-                <select
-                  value={getStyleValue("margin", "0px")}
-                  onChange={(e) => updateStyle("margin", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {[
-                    "0px",
-                    "4px",
-                    "8px",
-                    "12px",
-                    "16px",
-                    "20px",
-                    "24px",
-                    "32px",
-                  ].map((margin) => (
-                    <option key={margin} value={margin}>
-                      {margin}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Button Specific Styles */}
-          {selectedBlock.type === "button" && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Button Styles
-              </h3>
-
-              {/* Button Background Color */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Background Color
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="color"
-                    value={getStyleValue("backgroundColor", "#3B82F6")}
-                    onChange={(e) =>
-                      handleColorChange("backgroundColor", e.target.value)
-                    }
-                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={getStyleValue("backgroundColor", "#3B82F6")}
-                    onChange={(e) =>
-                      handleColorChange("backgroundColor", e.target.value)
-                    }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                    placeholder="#3B82F6"
-                  />
-                </div>
-              </div>
-
-              {/* Button Text Color */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Text Color
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="color"
-                    value={getStyleValue("color", "#FFFFFF")}
-                    onChange={(e) => handleColorChange("color", e.target.value)}
-                    className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={getStyleValue("color", "#FFFFFF")}
-                    onChange={(e) => handleColorChange("color", e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                    placeholder="#FFFFFF"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Border Radius
-                </label>
-                <select
-                  value={getStyleValue("borderRadius", "6px")}
-                  onChange={(e) => updateStyle("borderRadius", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {["0px", "4px", "6px", "8px", "12px", "20px", "50px"].map(
-                    (radius) => (
-                      <option key={radius} value={radius}>
-                        {radius}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Border
-                </label>
-                <select
-                  value={getStyleValue("border", "none")}
-                  onChange={(e) => updateStyle("border", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {[
-                    "none",
-                    "1px solid #ddd",
-                    "2px solid #ddd",
-                    "1px solid #000",
-                    "2px solid #000",
-                  ].map((border) => (
-                    <option key={border} value={border}>
-                      {border}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Image Specific Styles */}
-          {selectedBlock.type === "image" && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Image Styles
-              </h3>
-
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Alignment
-                </label>
-                <select
-                  value={getStyleValue("textAlign", "center")}
-                  onChange={(e) => updateStyle("textAlign", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {["left", "center", "right"].map((align) => (
-                    <option key={align} value={align}>
-                      {align}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Border Radius
-                </label>
-                <select
-                  value={getStyleValue("borderRadius", "0px")}
-                  onChange={(e) => updateStyle("borderRadius", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {["0px", "4px", "8px", "12px", "16px", "20px", "50%"].map(
-                    (radius) => (
-                      <option key={radius} value={radius}>
-                        {radius}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  Width
-                </label>
-                <select
-                  value={getStyleValue("width", "100%")}
-                  onChange={(e) => updateStyle("width", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-                >
-                  {["100%", "80%", "75%", "50%", "33%", "25%"].map((width) => (
-                    <option key={width} value={width}>
-                      {width}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "settings" && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Block Type
-            </label>
-            <p className="text-sm text-gray-600 capitalize bg-gray-100 px-3 py-2 rounded">
-              {selectedBlock.type}
-            </p>
+        {/* Typography Tab */}
+        {activeTab === "typography" && (
+          <div className="space-y-4">
+            <TypographyControls />
           </div>
+        )}
 
-          {selectedBlock.layoutType && (
+        {/* Background Tab */}
+        {activeTab === "background" && (
+          <div className="space-y-4">
+            <BackgroundControls />
+          </div>
+        )}
+
+        {/* Border Tab */}
+        {activeTab === "border" && (
+          <div className="space-y-4">
+            <BorderControls />
+          </div>
+        )}
+
+        {/* Spacing Tab */}
+        {activeTab === "spacing" && (
+          <div className="space-y-4">
+            <SpacingControls />
+          </div>
+        )}
+
+        {/* Advanced Tab */}
+        {activeTab === "advanced" && (
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Layout Type
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Custom CSS
               </label>
-              <p className="text-sm text-gray-600 capitalize bg-gray-100 px-3 py-2 rounded">
-                {selectedBlock.layoutType}
+              <textarea
+                value={localStyles.customCSS || ""}
+                onChange={(e) => updateStyle("customCSS", e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm font-mono"
+                rows={4}
+                placeholder="Enter custom CSS..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                CSS Classes
+              </label>
+              <input
+                type="text"
+                value={localStyles.className || ""}
+                onChange={(e) => updateStyle("className", e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+                placeholder="custom-class another-class"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Animation
+              </label>
+              <select
+                value={localStyles.animation || "none"}
+                onChange={(e) => updateStyle("animation", e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded text-sm"
+              >
+                <option value="none">No Animation</option>
+                <option value="fade">Fade In</option>
+                <option value="slide-up">Slide Up</option>
+                <option value="slide-down">Slide Down</option>
+                <option value="zoom">Zoom In</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Responsive Tab */}
+        {activeTab === "responsive" && (
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-800">
+                Responsive controls allow you to adjust styles for different
+                screen sizes.
               </p>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Block ID
-            </label>
-            <p className="text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded font-mono text-xs">
-              {selectedBlock.id}
-            </p>
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-gray-700">
+                Mobile Styles
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <SizeInput
+                  label="Font Size"
+                  value={
+                    selectedBlock.responsive?.mobile?.fontSize ||
+                    localStyles.fontSize ||
+                    "16px"
+                  }
+                  onChange={(value) => {
+                    const responsive = {
+                      ...selectedBlock.responsive,
+                      mobile: {
+                        ...selectedBlock.responsive?.mobile,
+                        fontSize: value,
+                      },
+                    };
+                    onUpdateBlock(selectedBlock.id, { responsive });
+                  }}
+                />
+                <SizeInput
+                  label="Padding"
+                  value={
+                    selectedBlock.responsive?.mobile?.padding ||
+                    localStyles.padding ||
+                    "0px"
+                  }
+                  onChange={(value) => {
+                    const responsive = {
+                      ...selectedBlock.responsive,
+                      mobile: {
+                        ...selectedBlock.responsive?.mobile,
+                        padding: value,
+                      },
+                    };
+                    onUpdateBlock(selectedBlock.id, { responsive });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-gray-700">
+                Tablet Styles
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <SizeInput
+                  label="Font Size"
+                  value={
+                    selectedBlock.responsive?.tablet?.fontSize ||
+                    localStyles.fontSize ||
+                    "16px"
+                  }
+                  onChange={(value) => {
+                    const responsive = {
+                      ...selectedBlock.responsive,
+                      tablet: {
+                        ...selectedBlock.responsive?.tablet,
+                        fontSize: value,
+                      },
+                    };
+                    onUpdateBlock(selectedBlock.id, { responsive });
+                  }}
+                />
+                <SizeInput
+                  label="Padding"
+                  value={
+                    selectedBlock.responsive?.tablet?.padding ||
+                    localStyles.padding ||
+                    "0px"
+                  }
+                  onChange={(value) => {
+                    const responsive = {
+                      ...selectedBlock.responsive,
+                      tablet: {
+                        ...selectedBlock.responsive?.tablet,
+                        padding: value,
+                      },
+                    };
+                    onUpdateBlock(selectedBlock.id, { responsive });
+                  }}
+                />
+              </div>
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Quick Actions Footer */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => {
+              const defaultStyles: Record<string, string> = {};
+              onUpdateBlock(selectedBlock.id, { styles: defaultStyles });
+            }}
+            onKeyDown={handleInputKeyDown}
+            className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            Reset Styles
+          </button>
+          <button
+            onClick={() => {
+              const styles = { ...selectedBlock.styles };
+              delete styles.customCSS;
+              delete styles.className;
+              onUpdateBlock(selectedBlock.id, { styles });
+            }}
+            onKeyDown={handleInputKeyDown}
+            className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            Clear Custom
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function PhotoIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-      />
-    </svg>
-  );
-}
-
+// Icon Component
 function CursorClickIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">

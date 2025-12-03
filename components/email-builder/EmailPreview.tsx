@@ -1,3 +1,5 @@
+'use client'; // FIX: Added 'use client' directive
+
 import Link from "next/link";
 
 interface EmailPreviewProps {
@@ -24,7 +26,7 @@ export default function EmailPreview({ html, onClose }: EmailPreviewProps) {
         </div>
         
         <div className="flex-1 overflow-auto p-8">
-          <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg">
+          <div className="max-w-2xl mx-auto bg-white">
             {/* Email Preview */}
             <div dangerouslySetInnerHTML={{ __html: html }} />
           </div>

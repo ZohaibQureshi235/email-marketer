@@ -1,12 +1,12 @@
 'use client';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import EmailBuilder from '@/components/email-builder/EmailBuilder';
+import ElementorStyleBuilder from '@/components/email-builder/ElementorStyleBuilder';
 
 export default function EmailBuilderPage() {
   return (
     <DashboardLayout>
-      <EmailBuilder />
+      <ElementorStyleBuilder />
     </DashboardLayout>
   );
 }

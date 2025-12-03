@@ -2,10 +2,7 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { RecentCampaigns } from "@/components/dashboard/RecentCampaigns";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { EmailSpeedIndicator } from "@/components/dashboard/EmailSpeedIndicator"; // Add this import
 import {
   EnvelopeIcon,
@@ -192,22 +189,6 @@ export default function DashboardPage() {
               actions={quickActions}
               onActionClick={handleQuickAction}
             />
-
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-              {/* Recent Campaigns */}
-              <div className="xl:col-span-2">
-                <RecentCampaigns
-                  campaigns={mockCampaigns}
-                  onViewCampaign={handleViewCampaign}
-                  onEditCampaign={handleEditCampaign}
-                />
-              </div>
-
-              {/* Activity Feed */}
-              <div className="xl:col-span-1">
-                <ActivityFeed activities={mockActivities} />
-              </div>
-            </div>
           </div>
         </div>
       </div>
