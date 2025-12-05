@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Cookies from "js-cookie";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,8 +14,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
+    if (!Cookies.get("UserToken")) {
+      router.push("/login");
     }
   }, [user, isLoading, router]);
 
@@ -30,9 +31,5 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return null;
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen bg-gray-50">{children}</div>;
 }

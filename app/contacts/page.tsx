@@ -1,125 +1,161 @@
 "use client";
 
+import { motion } from "framer-motion";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import EmailListManager from "@/components/email-list/EmailListManager";
-import { EmailSpeedIndicator } from "@/components/dashboard/EmailSpeedIndicator";
+
+import {
+  ChartBarIcon,
+  EnvelopeIcon,
+  UsersIcon,
+  DocumentTextIcon,
+  PlusIcon,
+  RocketLaunchIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function CampaignsPage() {
   return (
     <DashboardLayout>
-      <div className="flex h-screen bg-gray-50">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-lg">
-          <div className="p-6 border-b border-gray-200">
-            <Link href={"/"} className="cursor-pointer">
-              <h1 className="text-xl font-bold text-gray-900">
-                Email Marketer
-              </h1>
-              <p className="text-sm text-gray-600">POS Platform</p>
-            </Link>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+        {/* Animated Background Elements */}
+        <motion.div
+          animate={{
+            rotate: 360,
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            rotate: { duration: 30, repeat: Infinity, ease: "linear" },
+            scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+          }}
+          className="fixed -right-20 -top-20 w-96 h-96 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full pointer-events-none"
+        />
 
-          <nav className="p-4 space-y-2">
-            <a
-              href="/"
-              className="flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <ChartBarIcon className="h-5 w-5" />
-              <span>Dashboard</span>
-            </a>
-            <a
-              href="/email-builder"
-              className="flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <EnvelopeIcon className="h-5 w-5" />
-              <span>Email Builder</span>
-            </a>
-            <a
-              href="/contacts"
-              className="flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <UsersIcon className="h-5 w-5" />
-              <span>Contacts</span>
-            </a>
-          </nav>
-        </div>
+        <motion.div
+          animate={{
+            rotate: -360,
+            scale: [1, 0.9, 1],
+          }}
+          transition={{
+            rotate: { duration: 25, repeat: Infinity, ease: "linear" },
+            scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+          }}
+          className="fixed -left-20 -bottom-20 w-96 h-96 bg-gradient-to-tr from-cyan-500/5 to-blue-500/5 rounded-full pointer-events-none"
+        />
 
-        <div className="flex-1 overflow-auto">
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-gray-200">
-            <div className="px-8 py-4">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Campaign Management
-              </h2>
-              <p className="text-gray-600">
-                Manage your email campaigns and contacts
-              </p>
+        <div className="flex">
+          {/* Premium Sidebar */}
+          <motion.aside
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-white/80 backdrop-blur-xl border-r border-gray-100 shadow-xl"
+          >
+            <div className="p-6 border-b border-gray-100">
+              <Link href={"/"} className="group cursor-pointer block">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                    <RocketLaunchIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Email Marketer
+                    </h1>
+                    <p className="text-sm text-gray-500">
+                      Email sending Platform
+                    </p>
+                  </div>
+                </motion.div>
+              </Link>
             </div>
-          </header>
 
-          <div className="p-8 space-y-8">
-            {/* Email Speed Indicator */}
-            <EmailSpeedIndicator />
+            <nav className="p-4 space-y-1 flex-1">
+              <Link
+                href="/"
+                className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-xl transition-all duration-300 group"
+              >
+                <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-purple-500 transition-all duration-300">
+                  <ChartBarIcon className="h-5 w-5 text-gray-600 group-hover:text-white transition-colors" />
+                </div>
+                <span className="font-medium">Dashboard</span>
+              </Link>
 
-            {/* Email List Manager */}
-            <EmailListManager />
-          </div>
+              <Link
+                href="/email-builder"
+                className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-xl transition-all duration-300 group"
+              >
+                <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-purple-500 transition-all duration-300">
+                  <EnvelopeIcon className="h-5 w-5 text-gray-600 group-hover:text-white transition-colors" />
+                </div>
+                <span className="font-medium">Email Builder</span>
+              </Link>
+
+              <Link
+                href="/contacts"
+                className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 rounded-xl font-medium group"
+              >
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
+                  <UsersIcon className="h-5 w-5 text-white group-hover:text-white transition-colors" />
+                </div>
+                <span className="font-medium">Contacts</span>
+                <SparklesIcon className="h-4 w-4 text-amber-500 ml-auto" />
+              </Link>
+            </nav>
+          </motion.aside>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto">
+            {/* Premium Header */}
+            <motion.header
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-8 py-6"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Contacts Management
+                  </h2>
+                  <p className="text-gray-600 mt-2">
+                    Create, manage, and analyze your email contact with
+                    precision
+                  </p>
+                </div>
+                <Link href={'/email-builder'}>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-purple-500/25 transition-all duration-300"
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                    <span className="font-medium">New Campaign</span>
+                  </motion.button>
+                </Link>
+              </div>
+            </motion.header>
+
+            <div className="p-6 lg:p-8 space-y-8">
+              <div>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                >
+                  <div className="h-full">
+                    <EmailListManager />
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
     </DashboardLayout>
-  );
-}
-
-// Add the missing icons
-function ChartBarIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-      />
-    </svg>
-  );
-}
-
-function EnvelopeIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-      />
-    </svg>
-  );
-}
-
-function DocumentChartBarIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    </svg>
-  );
-}
-
-function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-      />
-    </svg>
   );
 }
