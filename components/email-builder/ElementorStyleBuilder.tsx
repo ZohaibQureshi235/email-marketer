@@ -1046,6 +1046,7 @@ export default function ElementorStyleBuilder() {
         {showSendModal && (
           <SendEmailModal
             emailHtml={emailHtml}
+            defaultSubject="Your Email Subject" 
             onClose={() => setShowSendModal(false)}
           />
         )}
